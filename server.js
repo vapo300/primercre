@@ -15,7 +15,7 @@ app.use(express.static("public"));
 // ===============================
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_KEY   // ← CORREGIDO AQUÍ
 );
 
 // ===============================
@@ -73,14 +73,12 @@ app.get("/reservar/:token", async (req, res) => {
   const { token } = req.params;
 
   try {
-    // 1. Buscar token
     const { data, error } = await supabase
       .from("tokens_reserva")
       .select("cliente_id, created_at")
       .eq("token", token)
       .single();
 
-    // TOKEN NO VÁLIDO → PÁGINA AZUL BONITA
     if (error || !data) {
       return res.status(404).send(`
 <!DOCTYPE html>
@@ -121,14 +119,12 @@ app.get("/reservar/:token", async (req, res) => {
 `);
     }
 
-    // 2. Obtener datos del cliente
     const { data: cliente } = await supabase
       .from("clientes")
       .select("nombre, telefono")
       .eq("id", data.cliente_id)
       .single();
 
-    // 3. Página de reserva azul clarito
     res.send(`
 <!DOCTYPE html>
 <html lang="es">
@@ -206,7 +202,6 @@ app.get("/reservar/:token", async (req, res) => {
 </body>
 </html>
 `);
-
   } catch (err) {
     console.error("Error en /reservar:", err);
     res.status(500).send("Error interno del servidor");
@@ -247,7 +242,6 @@ app.post("/webhook", async (req, res) => {
     const from = message.from;
     const text = message.text?.body || "";
 
-    // Buscar o crear cliente
     let { data: cliente } = await supabase
       .from("clientes")
       .select("*")
@@ -264,7 +258,6 @@ app.post("/webhook", async (req, res) => {
       cliente = nuevoCliente;
     }
 
-    // Guardar mensaje
     await supabase.from("mensajes").insert([
       {
         cliente_id: cliente.id,
@@ -274,7 +267,6 @@ app.post("/webhook", async (req, res) => {
       }
     ]);
 
-    // Detectar palabra "cita"
     if (text.toLowerCase().includes("cita")) {
       const token = Math.random().toString(36).substring(2, 12);
 
