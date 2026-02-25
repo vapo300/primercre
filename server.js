@@ -406,28 +406,44 @@ app.post("/webhook", async (req, res) => {
       return;
     }
 
-    // ============================================
-    //   BLOQUE ORIGINAL: SI DICE "cita"
-    // ============================================
-    if (text.toLowerCase().includes("cita")) {
-      const token = Math.random().toString(36).substring(2, 12);
+  // ============================================
+//   SI EL CLIENTE DICE "cita"
+// ============================================
+if (text.toLowerCase().includes("cita")) {
 
-      await supabase.from("tokens_reserva").insert({
-        cliente_id: cliente.id,
-        token
-      });
+  // 1. Comprobar si ya tiene un token sin usar
+  const { data: tokenExistente } = await supabase
+    .from("tokens_reserva")
+    .select("token, usado")
+    .eq("cliente_id", cliente.id)
+    .eq("usado", false)
+    .maybeSingle();
 
-      await enviarMensaje(
-        from,
-        `Perfecto ${cliente.nombre}, aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
-      );
-    }
-
-  } catch (error) {
-    console.error("Error en webhook:", error);
-    res.sendStatus(500);
+  // Si ya tiene un token válido → reenviar el mismo enlace
+  if (tokenExistente) {
+    await enviarMensaje(
+      from,
+      `Aquí tienes de nuevo tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${tokenExistente.token}`
+    );
+    return;
   }
-});
+
+  // 2. Si no tiene token → generar uno nuevo
+  const token = Math.random().toString(36).substring(2, 12);
+
+  await supabase.from("tokens_reserva").insert({
+    cliente_id: cliente.id,
+    token,
+    usado: false
+  });
+
+  await enviarMensaje(
+    from,
+    `Perfecto ${cliente.nombre}, aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
+  );
+
+  return;
+}
 
 // ===============================
 //   FUNCIÓN PARA ENVIAR MENSAJES
