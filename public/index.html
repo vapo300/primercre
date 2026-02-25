@@ -99,7 +99,7 @@
   </div>
 
   <div class="card">
-    <div class="value"><span class="label">Cliente:</span> {{CLIENTE}}</div>
+    <div class="value"><span class="label">Cliente:</span> ${cliente?.nombre || "Desconocido"}</div>
     <div class="value"><span class="label">Fecha:</span> (pendiente)</div>
     <div class="value"><span class="label">Hora:</span> (pendiente)</div>
     <div class="value"><span class="label">Servicio:</span> (pendiente)</div>
@@ -111,7 +111,7 @@
   <div class="actions">
     <button onclick="cargarHorarios()">Confirmar cita</button>
     <button onclick="cancelarCita()">Cancelar cita</button>
-    <button onclick="window.location.href='https://wa.me/{{TELEFONO}}'">Volver a WhatsApp</button>
+    <button onclick="window.location.href='https://wa.me/${cliente?.telefono}'">Volver a WhatsApp</button>
   </div>
 
 </body>
