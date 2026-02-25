@@ -65,6 +65,52 @@ app.get("/clientes", async (req, res) => {
     res.status(500).json({ error: "Error obteniendo clientes" });
   }
 });
+// ===============================
+//   RUTA: HORARIOS DISPONIBLES
+// ===============================
+app.get("/horarios-disponibles", async (req, res) => {
+  try {
+    // Si no llega fecha → usar la fecha de hoy
+    let fecha = req.query.fecha;
+    if (!fecha) {
+      const hoy = new Date();
+      fecha = hoy.toISOString().split("T")[0]; // YYYY-MM-DD
+    }
+
+    const diaSemana = new Date(fecha).getDay(); // 0=Domingo, 6=Sábado
+
+    // CERRADO fines de semana
+    if (diaSemana === 0 || diaSemana === 6) {
+      return res.json({ horas: [], mensaje: "Cerrado los fines de semana" });
+    }
+
+    // Horario de pruebas (lunes a viernes)
+    const mañanaInicio = 9;
+    const mañanaFin = 14;
+    const tardeInicio = 16;
+    const tardeFin = 18;
+
+    const generarHoras = (inicio, fin) => {
+      const horas = [];
+      for (let h = inicio; h < fin; h++) {
+        horas.push(`${h.toString().padStart(2, "0")}:00`);
+        horas.push(`${h.toString().padStart(2, "0")}:30`);
+      }
+      return horas;
+    };
+
+    const horasDisponibles = [
+      ...generarHoras(mañanaInicio, mañanaFin),
+      ...generarHoras(tardeInicio, tardeFin)
+    ];
+
+    res.json({ fecha, horas: horasDisponibles });
+
+  } catch (error) {
+    console.error("Error generando horarios:", error);
+    res.status(500).json({ error: "Error generando horarios" });
+  }
+});
 
 // ===============================
 //   RUTA: MOSTRAR PÁGINA DE RESERVA
