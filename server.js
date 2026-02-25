@@ -75,9 +75,10 @@ app.get("/reservar/:token", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("tokens_reserva")
-      .select("cliente_id, created_at")
+      .select("cliente_id, fecha_creacion")   // ✅ CORRECTO
       .eq("token", token)
       .single();
+
 
     if (error || !data) {
       return res.status(404).send(`
