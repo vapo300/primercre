@@ -121,10 +121,9 @@ app.get("/reservar/:token", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("tokens_reserva")
-      .select("cliente_id, fecha_creacion")   // ✅ CORRECTO
+      .select("cliente_id, fecha_creacion")
       .eq("token", token)
       .single();
-
 
     if (error || !data) {
       return res.status(404).send(`
@@ -172,6 +171,9 @@ app.get("/reservar/:token", async (req, res) => {
       .eq("id", data.cliente_id)
       .single();
 
+    // ===============================
+    //   HTML NUEVO PEGADO AQUÍ
+    // ===============================
     res.send(`
 <!DOCTYPE html>
 <html lang="es">
@@ -211,6 +213,15 @@ app.get("/reservar/:token", async (req, res) => {
       font-size: 18px; cursor: pointer; width: 80%; max-width: 300px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
+    #horarios button {
+      background-color: #0D47A1;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
   </style>
 
   <script>
@@ -221,6 +232,37 @@ app.get("/reservar/:token", async (req, res) => {
       if (newSize < 12) newSize = 12;
       if (newSize > 28) newSize = 28;
       body.style.fontSize = newSize + "px";
+    }
+
+    async function cargarHorarios() {
+      const fecha = new Date().toISOString().split("T")[0];
+
+      const res = await fetch(\`/horarios-disponibles?fecha=\${fecha}\`);
+      const data = await res.json();
+
+      const contenedor = document.getElementById("horarios");
+      contenedor.innerHTML = "";
+
+      if (data.horas.length === 0) {
+        contenedor.innerHTML = "<p>No hay horarios disponibles.</p>";
+        return;
+      }
+
+      data.horas.forEach(hora => {
+        const btn = document.createElement("button");
+        btn.textContent = hora;
+        btn.onclick = () => seleccionarHora(hora);
+        contenedor.appendChild(btn);
+      });
+    }
+
+    function seleccionarHora(hora) {
+      document.getElementById("horaSeleccionada").value = hora;
+      alert("Has seleccionado la hora: " + hora);
+    }
+
+    function cancelarCita() {
+      alert("Cancelar cita aún no implementado");
     }
   </script>
 </head>
@@ -240,9 +282,12 @@ app.get("/reservar/:token", async (req, res) => {
     <div class="value"><span class="label">Servicio:</span> (pendiente)</div>
   </div>
 
+  <div id="horarios"></div>
+  <input type="hidden" id="horaSeleccionada">
+
   <div class="actions">
-    <button onclick="alert('Confirmar cita aún no implementado')">Confirmar cita</button>
-    <button onclick="alert('Cancelar cita aún no implementado')">Cancelar cita</button>
+    <button onclick="cargarHorarios()">Confirmar cita</button>
+    <button onclick="cancelarCita()">Cancelar cita</button>
     <button onclick="window.location.href='https://wa.me/${cliente?.telefono}'">Volver a WhatsApp</button>
   </div>
 
