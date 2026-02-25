@@ -127,8 +127,8 @@ app.get("/reservar/:token", async (req, res) => {
 
     if (error || !data) {
       return res.status(404).send(`
-      <h1>Token no válido</h1>
-      <p>El enlace ha expirado o no existe.</p>
+        <h1>Token no válido</h1>
+        <p>El enlace ha expirado o no existe.</p>
       `);
     }
 
@@ -139,7 +139,7 @@ app.get("/reservar/:token", async (req, res) => {
       .single();
 
     // ===============================
-    //   HTML NUEVO COMPLETO
+    //   HTML FINAL CORREGIDO
     // ===============================
     res.send(`
 <!DOCTYPE html>
@@ -247,6 +247,9 @@ app.get("/reservar/:token", async (req, res) => {
       const data = await res.json();
 
       if (data.ok) {
+
+        alert("Tu cita ha sido guardada correctamente. Ahora verás los detalles en WhatsApp.");
+
         const mensaje = encodeURIComponent(
           \`Hola ${cliente?.nombre}, tu cita ha sido reservada correctamente.\\n\\n\` +
           \`📅 Fecha: \${new Date().toISOString().split("T")[0]}\\n\` +
@@ -259,6 +262,7 @@ app.get("/reservar/:token", async (req, res) => {
         );
 
         window.location.href = \`https://wa.me/${cliente?.telefono}?text=\${mensaje}\`;
+
       } else {
         alert("Hubo un error guardando la cita. Inténtalo de nuevo.");
       }
@@ -301,7 +305,6 @@ app.get("/reservar/:token", async (req, res) => {
     res.status(500).send("Error interno del servidor");
   }
 });
-
 
 // ===============================
 //   WEBHOOK DE WHATSAPP (GET)
