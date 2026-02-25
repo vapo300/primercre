@@ -272,11 +272,22 @@ app.post("/webhook", async (req, res) => {
     ]);
 
     // ============================================
-    //   NUEVO BLOQUE: GUARDAR NOMBRE REAL
+    //   SI EL CLIENTE ES NUEVO → PEDIR NOMBRE/MOTE
+    // ============================================
+    if (cliente.nombre === "Desconocido" && text.toLowerCase().includes("cita")) {
+      await enviarMensaje(
+        from,
+        "Perfecto, ¿me dices tu nombre, apellido o el mote con el que podamos reconocerte, por favor?"
+      );
+      return;
+    }
+
+    // ============================================
+    //   SI EL CLIENTE RESPONDE SU NOMBRE/MOTE → GUARDARLO
     // ============================================
     if (cliente.nombre === "Desconocido" && !text.toLowerCase().includes("cita")) {
 
-      // Guardar el nombre que ha escrito el cliente
+      // Guardar el nombre/mote que ha escrito el cliente
       await supabase
         .from("clientes")
         .update({ nombre: text })
@@ -295,10 +306,10 @@ app.post("/webhook", async (req, res) => {
 
       await enviarMensaje(
         from,
-        `Aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
+        `Perfecto ${text}, aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
       );
 
-      return; // IMPORTANTE: detener aquí
+      return;
     }
 
     // ============================================
@@ -314,7 +325,7 @@ app.post("/webhook", async (req, res) => {
 
       await enviarMensaje(
         from,
-        `Aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
+        `Perfecto ${cliente.nombre}, aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
       );
     }
 
