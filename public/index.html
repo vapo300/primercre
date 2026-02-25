@@ -103,6 +103,10 @@
       const data = await res.json();
 
       if (data.ok) {
+
+        // MENSAJE DE CONFIRMACIÓN
+        alert("Tu cita ha sido guardada correctamente. Ahora verás los detalles en WhatsApp.");
+
         const mensaje = encodeURIComponent(
           `Hola ${cliente?.nombre}, tu cita ha sido reservada correctamente.\n\n` +
           `📅 Fecha: ${new Date().toISOString().split("T")[0]}\n` +
@@ -115,6 +119,7 @@
         );
 
         window.location.href = `https://wa.me/${cliente?.telefono}?text=${mensaje}`;
+
       } else {
         alert("Hubo un error guardando la cita. Inténtalo de nuevo.");
       }
