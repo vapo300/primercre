@@ -243,12 +243,14 @@ app.post("/webhook", async (req, res) => {
     const from = message.from;
     const text = message.text?.body || "";
 
+    // Buscar cliente por teléfono
     let { data: cliente } = await supabase
       .from("clientes")
       .select("*")
       .eq("telefono", from)
       .single();
 
+    // Si no existe → crear cliente "Desconocido"
     if (!cliente) {
       const { data: nuevoCliente } = await supabase
         .from("clientes")
@@ -259,6 +261,7 @@ app.post("/webhook", async (req, res) => {
       cliente = nuevoCliente;
     }
 
+    // Guardar mensaje recibido
     await supabase.from("mensajes").insert([
       {
         cliente_id: cliente.id,
@@ -268,6 +271,39 @@ app.post("/webhook", async (req, res) => {
       }
     ]);
 
+    // ============================================
+    //   NUEVO BLOQUE: GUARDAR NOMBRE REAL
+    // ============================================
+    if (cliente.nombre === "Desconocido" && !text.toLowerCase().includes("cita")) {
+
+      // Guardar el nombre que ha escrito el cliente
+      await supabase
+        .from("clientes")
+        .update({ nombre: text })
+        .eq("id", cliente.id);
+
+      // Confirmar registro
+      await enviarMensaje(from, `Gracias ${text}. Ya estás registrado.`);
+
+      // Generar token y enviar enlace
+      const token = Math.random().toString(36).substring(2, 12);
+
+      await supabase.from("tokens_reserva").insert({
+        cliente_id: cliente.id,
+        token
+      });
+
+      await enviarMensaje(
+        from,
+        `Aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
+      );
+
+      return; // IMPORTANTE: detener aquí
+    }
+
+    // ============================================
+    //   BLOQUE ORIGINAL: SI DICE "cita"
+    // ============================================
     if (text.toLowerCase().includes("cita")) {
       const token = Math.random().toString(36).substring(2, 12);
 
