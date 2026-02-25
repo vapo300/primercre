@@ -79,9 +79,45 @@
       });
     }
 
-    function seleccionarHora(hora) {
-      document.getElementById("horaSeleccionada").value = hora;
-      alert("Has seleccionado la hora: " + hora);
+    async function seleccionarHora(hora) {
+      const confirmar = confirm(`Has seleccionado la hora: ${hora}. ¿Deseas reservar la cita?`);
+      if (!confirmar) return;
+
+      let motivo = prompt("¿Cuál es el motivo de la cita? (Ej: corte de pelo, afeitado...)");
+      if (!motivo || motivo.trim() === "") motivo = "Acción para cliente";
+
+      guardarCita(hora, motivo);
+    }
+
+    async function guardarCita(hora, motivo) {
+      const res = await fetch("/confirmar-cita", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "${token}",
+          hora: hora,
+          motivo: motivo
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        const mensaje = encodeURIComponent(
+          `Hola ${cliente?.nombre}, tu cita ha sido reservada correctamente.\n\n` +
+          `📅 Fecha: ${new Date().toISOString().split("T")[0]}\n` +
+          `⏰ Hora: ${hora}\n` +
+          `📝 Motivo: ${motivo}\n` +
+          `🏬 Centro: Tienda\n` +
+          `📍 Dirección: (sitio de tienda)\n` +
+          `📞 Teléfono: (teléfono de tienda)\n\n` +
+          `Si necesitas cambiar la cita, responde a este mensaje.`
+        );
+
+        window.location.href = `https://wa.me/${cliente?.telefono}?text=${mensaje}`;
+      } else {
+        alert("Hubo un error guardando la cita. Inténtalo de nuevo.");
+      }
     }
 
     function cancelarCita() {
@@ -102,11 +138,10 @@
     <div class="value"><span class="label">Cliente:</span> ${cliente?.nombre || "Desconocido"}</div>
     <div class="value"><span class="label">Fecha:</span> (pendiente)</div>
     <div class="value"><span class="label">Hora:</span> (pendiente)</div>
-    <div class="value"><span class="label">Servicio:</span> (pendiente)</div>
+    <div class="value"><span class="label">Motivo:</span> (pendiente)</div>
   </div>
 
   <div id="horarios"></div>
-  <input type="hidden" id="horaSeleccionada">
 
   <div class="actions">
     <button onclick="cargarHorarios()">Confirmar cita</button>
