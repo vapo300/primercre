@@ -48,6 +48,11 @@
   </style>
 
   <script>
+    // Variables que el servidor reemplaza
+    const TOKEN = "{{TOKEN}}";
+    const CLIENTE_NOMBRE = "{{CLIENTE_NOMBRE}}";
+    const CLIENTE_TELEFONO = "{{CLIENTE_TELEFONO}}";
+
     function changeFontSize(delta) {
       const body = document.body;
       let current = parseFloat(window.getComputedStyle(body).fontSize);
@@ -94,7 +99,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          token: "${token}",
+          token: TOKEN,
           hora: hora,
           motivo: motivo
         })
@@ -104,11 +109,10 @@
 
       if (data.ok) {
 
-        // MENSAJE DE CONFIRMACIÓN
         alert("Tu cita ha sido guardada correctamente. Ahora verás los detalles en WhatsApp.");
 
         const mensaje = encodeURIComponent(
-          `Hola ${cliente?.nombre}, tu cita ha sido reservada correctamente.\n\n` +
+          `Hola ${CLIENTE_NOMBRE}, tu cita ha sido reservada correctamente.\n\n` +
           `📅 Fecha: ${new Date().toISOString().split("T")[0]}\n` +
           `⏰ Hora: ${hora}\n` +
           `📝 Motivo: ${motivo}\n` +
@@ -118,7 +122,7 @@
           `Si necesitas cambiar la cita, responde a este mensaje.`
         );
 
-        window.location.href = `https://wa.me/${cliente?.telefono}?text=${mensaje}`;
+        window.location.href = `https://wa.me/${CLIENTE_TELEFONO}?text=${mensaje}`;
 
       } else {
         alert("Hubo un error guardando la cita. Inténtalo de nuevo.");
@@ -140,7 +144,7 @@
   </div>
 
   <div class="card">
-    <div class="value"><span class="label">Cliente:</span> ${cliente?.nombre || "Desconocido"}</div>
+    <div class="value"><span class="label">Cliente:</span> {{CLIENTE_NOMBRE}}</div>
     <div class="value"><span class="label">Fecha:</span> (pendiente)</div>
     <div class="value"><span class="label">Hora:</span> (pendiente)</div>
     <div class="value"><span class="label">Motivo:</span> (pendiente)</div>
@@ -151,7 +155,7 @@
   <div class="actions">
     <button onclick="cargarHorarios()">Confirmar cita</button>
     <button onclick="cancelarCita()">Cancelar cita</button>
-    <button onclick="window.location.href='https://wa.me/${cliente?.telefono}'">Volver a WhatsApp</button>
+    <button onclick="window.location.href='https://wa.me/{{CLIENTE_TELEFONO}}'">Volver a WhatsApp</button>
   </div>
 
 </body>
