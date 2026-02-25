@@ -369,36 +369,34 @@ app.post("/webhook", async (req, res) => {
     ]);
 
     // ============================================
-    //   SI EL CLIENTE ES NUEVO → PEDIR NOMBRE/MOTE
+    //   SI EL CLIENTE ES NUEVO → PEDIR NOMBRE
     // ============================================
     if (cliente.nombre === "Desconocido" && text.toLowerCase().includes("cita")) {
       await enviarMensaje(
         from,
-        "Perfecto, ¿me dices tu nombre, apellido o el mote con el que podamos reconocerte, por favor?"
+        "Perfecto, ¿me dices tu nombre, apellido o el mote con el que podamos reconocerte?"
       );
       return;
     }
 
     // ============================================
-    //   SI EL CLIENTE RESPONDE SU NOMBRE/MOTE → GUARDARLO
+    //   SI EL CLIENTE RESPONDE SU NOMBRE
     // ============================================
     if (cliente.nombre === "Desconocido" && !text.toLowerCase().includes("cita")) {
 
-      // Guardar el nombre/mote que ha escrito el cliente
       await supabase
         .from("clientes")
         .update({ nombre: text })
         .eq("id", cliente.id);
 
-      // Confirmar registro
       await enviarMensaje(from, `Gracias ${text}. Ya estás registrado.`);
 
-      // Generar token y enviar enlace
       const token = Math.random().toString(36).substring(2, 12);
 
       await supabase.from("tokens_reserva").insert({
         cliente_id: cliente.id,
-        token
+        token,
+        usado: false
       });
 
       await enviarMensaje(
@@ -409,44 +407,62 @@ app.post("/webhook", async (req, res) => {
       return;
     }
 
-  // ============================================
-//   SI EL CLIENTE DICE "cita"
-// ============================================
-if (text.toLowerCase().includes("cita")) {
+    // ============================================
+    //   SI EL CLIENTE DICE "cita" O "cancelar cita"
+    // ============================================
+    if (
+      text.toLowerCase().includes("cita") ||
+      text.toLowerCase().includes("cancelar cita") ||
+      text.toLowerCase().includes("anular cita")
+    ) {
 
-  // 1. Comprobar si ya tiene un token sin usar
-  const { data: tokenExistente } = await supabase
-    .from("tokens_reserva")
-    .select("token, usado")
-    .eq("cliente_id", cliente.id)
-    .eq("usado", false)
-    .maybeSingle();
+      // Buscar token sin usar
+      const { data: tokenExistente } = await supabase
+        .from("tokens_reserva")
+        .select("token, usado")
+        .eq("cliente_id", cliente.id)
+        .eq("usado", false)
+        .maybeSingle();
 
-  // Si ya tiene un token válido → reenviar el mismo enlace
-  if (tokenExistente) {
-    await enviarMensaje(
-      from,
-      `Aquí tienes de nuevo tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${tokenExistente.token}`
-    );
-    return;
+      let token = tokenExistente?.token;
+
+      // Si no existe → generar uno nuevo
+      if (!token) {
+        token = Math.random().toString(36).substring(2, 12);
+
+        await supabase.from("tokens_reserva").insert({
+          cliente_id: cliente.id,
+          token,
+          usado: false
+        });
+      }
+
+      // Enviar enlace SIEMPRE
+      await enviarMensaje(
+        from,
+        `Aquí tienes tu enlace para gestionar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
+      );
+
+      // Si pidió cancelar → enviar dirección
+      if (text.toLowerCase().includes("cancelar")) {
+        await enviarMensaje(
+          from,
+          "Información de la tienda:\n\n" +
+          "🏬 Centro: Tienda\n" +
+          "📍 Dirección: (sitio de tienda)\n" +
+          "📞 Teléfono: (teléfono de tienda)\n\n" +
+          "Desde el enlace puedes cancelar o modificar tu cita."
+        );
+      }
+
+      return;
+    }
+
+  } catch (error) {
+    console.error("Error en webhook:", error);
+    res.sendStatus(500);
   }
-
-  // 2. Si no tiene token → generar uno nuevo
-  const token = Math.random().toString(36).substring(2, 12);
-
-  await supabase.from("tokens_reserva").insert({
-    cliente_id: cliente.id,
-    token,
-    usado: false
-  });
-
-  await enviarMensaje(
-    from,
-    `Perfecto ${cliente.nombre}, aquí tienes tu enlace para reservar tu cita:\nhttps://primercre.onrender.com/reservar/${token}`
-  );
-
-  return;
-}
+});
 
 // ===============================
 //   FUNCIÓN PARA ENVIAR MENSAJES
@@ -476,11 +492,3 @@ async function enviarMensaje(to, text) {
     console.error("Error enviando mensaje:", error);
   }
 }
-
-// ===============================
-//   INICIAR SERVIDOR
-// ===============================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Servidor backend escuchando en puerto " + PORT);
-});
