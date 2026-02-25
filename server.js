@@ -158,7 +158,173 @@ app.get("/reservar/:token", async (req, res) => {
     res.status(500).send("Error interno del servidor");
   }
 });
+    // ===============================
+    //   HTML FINAL CORREGIDO
+    // ===============================
+    res.send(`
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reserva tu cita</title>
 
+  <style>
+    body {
+      background-color: #E3F2FD;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 15px;
+      color: #0D47A1;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    h1 { text-align: center; font-size: 24px; margin-bottom: 20px; }
+    .font-controls { text-align: center; margin-bottom: 20px; }
+    .font-controls button {
+      background-color: #1976D2; color: white; border: none;
+      padding: 12px 18px; margin: 0 8px; border-radius: 8px;
+      font-size: 18px; cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .card {
+      background: #FFFFFF; padding: 20px; border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-bottom: 20px;
+    }
+    .label { font-weight: bold; color: #0D47A1; }
+    .value { margin-bottom: 12px; }
+    .actions { text-align: center; margin-top: 20px; }
+    .actions button {
+      background-color: #1976D2; color: white; border: none;
+      padding: 14px 20px; margin: 10px; border-radius: 10px;
+      font-size: 18px; cursor: pointer; width: 80%; max-width: 300px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    #horarios button {
+      background-color: #0D47A1;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+
+  <script>
+    function changeFontSize(delta) {
+      const body = document.body;
+      let current = parseFloat(window.getComputedStyle(body).fontSize);
+      let newSize = current + delta;
+      if (newSize < 12) newSize = 12;
+      if (newSize > 28) newSize = 28;
+      body.style.fontSize = newSize + "px";
+    }
+
+    async function cargarHorarios() {
+      const fecha = new Date().toISOString().split("T")[0];
+
+      const res = await fetch(\`/horarios-disponibles?fecha=\${fecha}\`);
+      const data = await res.json();
+
+      const contenedor = document.getElementById("horarios");
+      contenedor.innerHTML = "";
+
+      if (data.horas.length === 0) {
+        contenedor.innerHTML = "<p>No hay horarios disponibles.</p>";
+        return;
+      }
+
+      data.horas.forEach(hora => {
+        const btn = document.createElement("button");
+        btn.textContent = hora;
+        btn.onclick = () => seleccionarHora(hora);
+        contenedor.appendChild(btn);
+      });
+    }
+
+    async function seleccionarHora(hora) {
+      const confirmar = confirm(\`Has seleccionado la hora: \${hora}. ¿Deseas reservar la cita?\`);
+      if (!confirmar) return;
+
+      let motivo = prompt("¿Cuál es el motivo de la cita? (Ej: corte de pelo, afeitado...)");
+      if (!motivo || motivo.trim() === "") motivo = "Acción para cliente";
+
+      guardarCita(hora, motivo);
+    }
+
+    async function guardarCita(hora, motivo) {
+      const res = await fetch("/confirmar-cita", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "${token}",
+          hora: hora,
+          motivo: motivo
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+
+        alert("Tu cita ha sido guardada correctamente. Ahora verás los detalles en WhatsApp.");
+
+        const mensaje = encodeURIComponent(
+          \`Hola ${cliente?.nombre}, tu cita ha sido reservada correctamente.\\n\\n\` +
+          \`📅 Fecha: \${new Date().toISOString().split("T")[0]}\\n\` +
+          \`⏰ Hora: \${hora}\\n\` +
+          \`📝 Motivo: \${motivo}\\n\` +
+          \`🏬 Centro: Tienda\\n\` +
+          \`📍 Dirección: (sitio de tienda)\\n\` +
+          \`📞 Teléfono: (teléfono de tienda)\\n\\n\` +
+          \`Si necesitas cambiar la cita, responde a este mensaje.\`
+        );
+
+        window.location.href = \`https://wa.me/${cliente?.telefono}?text=\${mensaje}\`;
+
+      } else {
+        alert("Hubo un error guardando la cita. Inténtalo de nuevo.");
+      }
+    }
+
+    function cancelarCita() {
+      alert("Cancelar cita aún no implementado");
+    }
+  </script>
+</head>
+
+<body>
+  <h1>Detalles de tu cita</h1>
+
+  <div class="font-controls">
+    <button onclick="changeFontSize(2)">A+</button>
+    <button onclick="changeFontSize(-2)">A−</button>
+  </div>
+
+  <div class="card">
+    <div class="value"><span class="label">Cliente:</span> ${cliente?.nombre || "Desconocido"}</div>
+    <div class="value"><span class="label">Fecha:</span> (pendiente)</div>
+    <div class="value"><span class="label">Hora:</span> (pendiente)</div>
+    <div class="value"><span class="label">Motivo:</span> (pendiente)</div>
+  </div>
+
+  <div id="horarios"></div>
+
+  <div class="actions">
+    <button onclick="cargarHorarios()">Confirmar cita</button>
+    <button onclick="cancelarCita()">Cancelar cita</button>
+    <button onclick="window.location.href='https://wa.me/${cliente?.telefono}'">Volver a WhatsApp</button>
+  </div>
+
+</body>
+</html>
+`);
+  } catch (err) {
+    console.error("Error en /reservar:", err);
+    res.status(500).send("Error interno del servidor");
+  }
+});
 // ===============================
 //   WEBHOOK DE WHATSAPP (GET)
 // ===============================
