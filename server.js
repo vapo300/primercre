@@ -127,42 +127,9 @@ app.get("/reservar/:token", async (req, res) => {
 
     if (error || !data) {
       return res.status(404).send(`
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Token no válido</title>
-  <style>
-    body {
-      background-color: #E3F2FD;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      color: #0D47A1;
-      text-align: center;
-    }
-    .card {
-      background: #FFFFFF;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      max-width: 400px;
-      margin: 40px auto;
-    }
-    h1 { font-size: 24px; margin-bottom: 10px; }
-    p { font-size: 18px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Token no válido</h1>
-    <p>El enlace ha expirado o no existe.</p>
-    <p><strong>Backend funcionando correctamente con Supabase</strong></p>
-  </div>
-</body>
-</html>
-`);
+      <h1>Token no válido</h1>
+      <p>El enlace ha expirado o no existe.</p>
+      `);
     }
 
     const { data: cliente } = await supabase
@@ -172,7 +139,7 @@ app.get("/reservar/:token", async (req, res) => {
       .single();
 
     // ===============================
-    //   HTML NUEVO PEGADO AQUÍ
+    //   HTML NUEVO COMPLETO
     // ===============================
     res.send(`
 <!DOCTYPE html>
@@ -256,9 +223,45 @@ app.get("/reservar/:token", async (req, res) => {
       });
     }
 
-    function seleccionarHora(hora) {
-      document.getElementById("horaSeleccionada").value = hora;
-      alert("Has seleccionado la hora: " + hora);
+    async function seleccionarHora(hora) {
+      const confirmar = confirm(\`Has seleccionado la hora: \${hora}. ¿Deseas reservar la cita?\`);
+      if (!confirmar) return;
+
+      let motivo = prompt("¿Cuál es el motivo de la cita? (Ej: corte de pelo, afeitado...)");
+      if (!motivo || motivo.trim() === "") motivo = "Acción para cliente";
+
+      guardarCita(hora, motivo);
+    }
+
+    async function guardarCita(hora, motivo) {
+      const res = await fetch("/confirmar-cita", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: "${token}",
+          hora: hora,
+          motivo: motivo
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.ok) {
+        const mensaje = encodeURIComponent(
+          \`Hola ${cliente?.nombre}, tu cita ha sido reservada correctamente.\\n\\n\` +
+          \`📅 Fecha: \${new Date().toISOString().split("T")[0]}\\n\` +
+          \`⏰ Hora: \${hora}\\n\` +
+          \`📝 Motivo: \${motivo}\\n\` +
+          \`🏬 Centro: Tienda\\n\` +
+          \`📍 Dirección: (sitio de tienda)\\n\` +
+          \`📞 Teléfono: (teléfono de tienda)\\n\\n\` +
+          \`Si necesitas cambiar la cita, responde a este mensaje.\`
+        );
+
+        window.location.href = \`https://wa.me/${cliente?.telefono}?text=\${mensaje}\`;
+      } else {
+        alert("Hubo un error guardando la cita. Inténtalo de nuevo.");
+      }
     }
 
     function cancelarCita() {
@@ -279,11 +282,10 @@ app.get("/reservar/:token", async (req, res) => {
     <div class="value"><span class="label">Cliente:</span> ${cliente?.nombre || "Desconocido"}</div>
     <div class="value"><span class="label">Fecha:</span> (pendiente)</div>
     <div class="value"><span class="label">Hora:</span> (pendiente)</div>
-    <div class="value"><span class="label">Servicio:</span> (pendiente)</div>
+    <div class="value"><span class="label">Motivo:</span> (pendiente)</div>
   </div>
 
   <div id="horarios"></div>
-  <input type="hidden" id="horaSeleccionada">
 
   <div class="actions">
     <button onclick="cargarHorarios()">Confirmar cita</button>
@@ -299,6 +301,7 @@ app.get("/reservar/:token", async (req, res) => {
     res.status(500).send("Error interno del servidor");
   }
 });
+
 
 // ===============================
 //   WEBHOOK DE WHATSAPP (GET)
